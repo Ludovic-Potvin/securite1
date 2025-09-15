@@ -1,7 +1,7 @@
 [project]
 name = "securite1"
 version = "0.1.0"
-description = "Add your description here"
+description = "Remise devoir 1 securite"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []
