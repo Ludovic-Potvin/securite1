@@ -1,14 +1,18 @@
 import argparse
 import socket
-from typing import cast
+from queue import Queue
+from threading import Thread
+from typing import Never, cast
 
 SOCKET_TIMEOUT = 1
 MAX_PORT = 65535
+NUM_WORKER = 5
+
+q: Queue[int] = Queue()
 
 
 def main(host: str) -> None:
     try:
-        print(f"scanning {host}...")
         scan_host(host)
     except KeyboardInterrupt:
         print("\nScan is stopping...")
@@ -16,15 +20,31 @@ def main(host: str) -> None:
         print("Scan completed successfully.")
 
 
-def scan_host(host: str) -> None:
+def worker(host: str) -> Never:
     """
-    Scan all port on a target host. Returns nothing, directly
-    print all found open port.
+    While running, will always try to scan port from the queue.
+    When it find an open port, the worker will print the port.
     """
-    for port in range(MAX_PORT + 1):
-        is_open = scan_port(host, port)
+    while True:
+        port: int = q.get()
+        is_open: bool = scan_port(host, port)
         if is_open:
             print(f"--> Port {port}/TCP is open.")
+
+
+def scan_host(host: str) -> None:
+    # Setup workers
+    workers: list[Thread] = []
+    for _ in range(NUM_WORKER):
+        t: Thread = Thread(target=worker, args=(host,), daemon=True)
+        t.start()
+        workers.append(t)
+
+    # Setup queue
+    for port in range(MAX_PORT):
+        q.put(port)
+
+    q.join()
 
 
 def scan_port(host: str, port: int) -> bool:
